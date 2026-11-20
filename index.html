@@ -1,0 +1,1756 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Studio4K Pro — AI Photo Enhancer & Cinematic Video Studio</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+          },
+          colors: {
+            ytbg: '#0f0f0f',
+            ytsurface: '#181818',
+            ytelevated: '#212121',
+            ythover: '#2b2b2b',
+            ytborder: '#303030',
+            ytred: '#ff0033',
+            accent: '#3ea6ff',
+            capcut: '#00d2d3',
+          },
+        },
+      },
+    };
+  </script>
+  <style>
+    /* Custom scrollbar & touch helpers for mobile WebView & browser smoothness */
+    * {
+      -webkit-tap-highlight-color: transparent;
+    }
+    html, body {
+      background-color: #0f0f0f;
+      color: #f1f1f1;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      overflow-x: hidden;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    /* Custom range slider styling */
+    input[type="range"].studio-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: #2f2f2f;
+      height: 6px;
+      border-radius: 999px;
+      outline: none;
+    }
+    input[type="range"].studio-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #ff0033;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.55);
+      transition: transform 0.12s ease;
+    }
+    input[type="range"].studio-slider::-webkit-slider-thumb:active {
+      transform: scale(1.15);
+    }
+    input[type="range"].studio-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: 3px solid #ff0033;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.55);
+    }
+    /* Checkerboard for transparent/comparison framing */
+    .checker-bg {
+      background-color: #141414;
+      background-image:
+        linear-gradient(45deg, #1d1d1d 25%, transparent 25%),
+        linear-gradient(-45deg, #1d1d1d 25%, transparent 25%),
+        linear-gradient(45deg, transparent 75%, #1d1d1d 75%),
+        linear-gradient(-45deg, transparent 75%, #1d1d1d 75%);
+      background-size: 16px 16px;
+      background-position: 0 0, 0 8px, 8px -8px, -8px 0;
+    }
+  </style>
+</head>
+<body class="bg-ytbg text-gray-100 min-h-screen flex flex-col select-none">
+
+  <!-- Hidden File Inputs for Photo & Video Gallery/File Selection -->
+  <input id="photoFileInput" type="file" accept="image/*" class="hidden" />
+  <input id="videoFileInput" type="file" accept="video/*" class="hidden" />
+
+  <!-- Toast Notification Banner -->
+  <div id="toastContainer" class="fixed top-16 left-1/2 -translate-x-1/2 z-50 w-[92%] max-w-md pointer-events-none flex flex-col gap-2"></div>
+
+  <!-- Top YouTube-Inspired Header Bar -->
+  <header class="sticky top-0 z-40 bg-ytbg/95 backdrop-blur-md border-b border-ytborder px-3 sm:px-5 h-14 flex items-center justify-between gap-2">
+    <!-- Brand Logo -->
+    <div class="flex items-center gap-2.5 min-w-0">
+      <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-[#ff0033] via-[#ff3355] to-[#b30024] flex items-center justify-center shadow-lg shadow-red-900/30 shrink-0">
+        <!-- Inline SVG: Sparkle Play Emblem -->
+        <svg class="w-5 h-5 text-white" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+          <path d="M8 5.5v13l10.5-6.5L8 5.5z" />
+          <path d="M18.5 3l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8z" />
+        </svg>
+      </div>
+      <div class="flex items-center gap-1.5 min-w-0">
+        <span class="font-extrabold tracking-tight text-base sm:text-lg text-white truncate">Studio4K</span>
+        <span class="px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded bg-ytred text-white shrink-0">PRO</span>
+        <span class="hidden md:inline-flex items-center px-2 py-0.5 text-[11px] font-semibold rounded-full bg-ytelevated text-accent border border-ytborder">
+          4K AI + CapCut Engine
+        </span>
+      </div>
+    </div>
+
+    <!-- Right Controls: Gallery Permission Status + Upload Trigger + GitHub/APK Guide -->
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <button
+        id="permissionBadgeBtn"
+        type="button"
+        title="Check Gallery & File Permission Status"
+        class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full text-xs font-medium bg-ytelevated hover:bg-ythover border border-ytborder text-emerald-400 transition cursor-pointer"
+      >
+        <span id="permissionDot" class="w-2 h-2 rounded-full bg-amber-400"></span>
+        <span id="permissionLabel" class="hidden sm:inline">Gallery Ready</span>
+        <span class="sm:hidden">Media</span>
+      </button>
+
+      <button
+        id="quickUploadBtn"
+        type="button"
+        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold bg-white text-black hover:bg-gray-200 transition shadow cursor-pointer"
+      >
+        <!-- Inline SVG: Upload / Folder Plus -->
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="17 8 12 3 7 8" />
+          <line x1="12" y1="3" x2="12" y2="15" />
+        </svg>
+        <span>Upload</span>
+      </button>
+
+      <button
+        id="openGuideBtn"
+        type="button"
+        title="GitHub Pages & Android APK Guide"
+        class="p-2 rounded-full bg-ytelevated hover:bg-ythover border border-ytborder text-gray-200 transition cursor-pointer"
+      >
+        <!-- Inline SVG: Code / GitHub / Android Info -->
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="16 18 22 12 16 6" />
+          <polyline points="8 6 2 12 8 18" />
+        </svg>
+      </button>
+    </div>
+  </header>
+
+  <!-- YouTube-Style Category Filter Chips Bar -->
+  <div class="sticky top-14 z-30 bg-ytbg/95 backdrop-blur-md border-b border-ytborder px-3 sm:px-5 py-2.5">
+    <div id="categoryChips" class="flex items-center gap-2 overflow-x-auto no-scrollbar">
+      <button data-category="all" class="cat-chip active px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-black transition cursor-pointer">
+        All Tools
+      </button>
+      <button data-category="remini" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap bg-ytelevated hover:bg-ythover text-gray-200 border border-ytborder transition cursor-pointer">
+        Remini HD/4K
+      </button>
+      <button data-category="capcut" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap bg-ytelevated hover:bg-ythover text-gray-200 border border-ytborder transition cursor-pointer">
+        CapCut Video
+      </button>
+      <button data-category="ai" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap bg-ytelevated hover:bg-ythover text-gray-200 border border-ytborder transition cursor-pointer">
+        AI Enhancer
+      </button>
+      <button data-category="color" class="cat-chip px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap bg-ytelevated hover:bg-ythover text-gray-200 border border-ytborder transition cursor-pointer">
+        Color & Cinematic
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Workspace Container -->
+  <main class="flex-1 w-full max-w-[1440px] mx-auto px-3 sm:px-5 pt-4 pb-24">
+    <!-- One-Time Gallery/File Permission & Quick Source Banner -->
+    <section id="mediaSourceBanner" class="mb-4 rounded-2xl bg-gradient-to-r from-[#1c1c1c] via-[#201822] to-[#182228] border border-ytborder p-3.5 sm:p-4 flex flex-col md:flex-row md:items-center justify-between gap-3">
+      <div class="flex items-start sm:items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-accent/15 border border-accent/30 text-accent flex items-center justify-center shrink-0">
+          <!-- Inline SVG: Photo & Video Gallery Icon -->
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2" ry="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <polyline points="21 15 16 10 5 21" />
+          </svg>
+        </div>
+        <div>
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-sm sm:text-base font-bold text-white">One-Time Gallery & File Access</h2>
+            <span id="permStatusPill" class="px-2 py-0.5 rounded-full text-[11px] font-semibold bg-amber-500/15 text-amber-300 border border-amber-500/30">
+              Tap to Enable / Pick Media
+            </span>
+          </div>
+          <p class="text-xs text-gray-400 mt-0.5">
+            Select low-quality photos to upscale to 4K HD (Remini style) or pick clips for CapCut cinematic editing. Once enabled, your session stays ready.
+          </p>
+        </div>
+      </div>
+
+      <div class="flex flex-wrap items-center gap-2 shrink-0">
+        <button id="enableGalleryBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-semibold bg-ytelevated hover:bg-ythover text-white border border-ytborder transition flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <polyline points="9 12 11 14 15 10" />
+          </svg>
+          <span>Allow Gallery Once</span>
+        </button>
+
+        <button id="pickPhotoBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-semibold bg-ytred hover:bg-[#e0002c] text-white transition flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <rect x="3" y="3" width="18" height="18" rx="2" />
+            <circle cx="8.5" cy="8.5" r="1.5" />
+            <path d="M21 15l-5-5L5 21" />
+          </svg>
+          <span>Photo (4K)</span>
+        </button>
+
+        <button id="pickVideoBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-semibold bg-capcut text-black hover:bg-[#00b8b9] transition flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="23 7 16 12 23 17 23 7" />
+            <rect x="1" y="5" width="15" height="14" rx="2" ry="2" />
+          </svg>
+          <span>Video (CapCut)</span>
+        </button>
+
+        <button id="loadDemoSampleBtn" type="button" class="px-3 py-2 rounded-xl text-xs font-semibold bg-ytelevated hover:bg-ythover text-accent border border-ytborder transition flex items-center gap-1.5 cursor-pointer">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          <span>Try Sample</span>
+        </button>
+      </div>
+    </section>
+
+    <!-- Primary Responsive Studio Grid: Preview Stage (Left/Top) + Tools Panel (Right/Bottom) -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+
+      <!-- LEFT / MAIN PREVIEW STAGE (7 cols on lg) -->
+      <section class="lg:col-span-7 flex flex-col gap-3">
+        <!-- Studio Mode Switcher Bar -->
+        <div class="bg-ytsurface border border-ytborder rounded-2xl p-2 flex items-center justify-between gap-2">
+          <div class="flex items-center gap-1.5 bg-ytbg p-1 rounded-xl border border-ytborder/70">
+            <button id="modePhotoBtn" type="button" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold bg-ytred text-white transition flex items-center gap-1.5 cursor-pointer">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z" />
+              </svg>
+              <span>Photo 4K</span>
+            </button>
+            <button id="modeVideoBtn" type="button" class="px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-300 hover:text-white hover:bg-ytelevated transition flex items-center gap-1.5 cursor-pointer">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="4" width="20" height="16" rx="2" />
+                <polygon points="10 8 16 12 10 16 10 8" />
+              </svg>
+              <span>Video Studio</span>
+            </button>
+          </div>
+
+          <!-- Active Media Info & Zoom / Reset -->
+          <div class="flex items-center gap-1.5 pr-1">
+            <span id="activeMediaBadge" class="hidden sm:inline-block px-2.5 py-1 rounded-lg text-xs font-medium bg-ytelevated text-gray-300 border border-ytborder truncate max-w-[160px]">
+              Sample Portrait
+            </span>
+            <button id="zoomOutBtn" type="button" title="Zoom Out" class="p-2 rounded-lg bg-ytelevated hover:bg-ythover text-gray-200 transition cursor-pointer">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+            </button>
+            <span id="zoomReadout" class="text-xs font-mono text-gray-300 min-w-[42px] text-center">100%</span>
+            <button id="zoomInBtn" type="button" title="Zoom In" class="p-2 rounded-lg bg-ytelevated hover:bg-ythover text-gray-200 transition cursor-pointer">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round">
+                <circle cx="11" cy="11" r="8" />
+                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                <line x1="11" y1="8" x2="11" y2="14" />
+                <line x1="8" y1="11" x2="14" y2="11" />
+              </svg>
+            </button>
+            <button id="resetAllBtn" type="button" title="Reset All Adjustments" class="p-2 rounded-lg bg-ytelevated hover:bg-ythover text-amber-300 transition cursor-pointer">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                <path d="M3 3v5h5" />
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <!-- PHOTO PREVIEW STAGE (Before / After Split Slider + Canvas) -->
+        <div id="photoStageCard" class="bg-ytsurface border border-ytborder rounded-2xl overflow-hidden shadow-xl">
+          <div id="photoViewport" class="relative w-full aspect-[4/3] sm:aspect-[16/10] checker-bg overflow-hidden flex items-center justify-center touch-none">
+            <!-- Enhanced Output Canvas -->
+            <canvas id="enhancedCanvas" class="max-w-full max-h-full object-contain transition-transform duration-150 ease-out"></canvas>
+
+            <!-- Before (Original) Overlay Clip -->
+            <div id="beforeOverlay" class="absolute inset-0 pointer-events-none overflow-hidden" style="clip-path: inset(0 50% 0 0);">
+              <div class="w-full h-full flex items-center justify-center">
+                <canvas id="originalCanvas" class="max-w-full max-h-full object-contain transition-transform duration-150 ease-out"></canvas>
+              </div>
+            </div>
+
+            <!-- Split Divider Line & Handle -->
+            <div id="splitDivider" class="absolute top-0 bottom-0 w-0.5 bg-white shadow-[0_0_12px_rgba(0,0,0,0.9)] pointer-events-none" style="left: 50%;">
+              <div id="splitHandle" class="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-9 h-9 rounded-full bg-white text-black shadow-xl border-2 border-ytred flex items-center justify-center">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="15 18 9 12 15 6" />
+                </svg>
+                <svg class="w-4 h-4 -ml-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <polyline points="9 18 15 12 9 6" />
+                </svg>
+              </div>
+            </div>
+
+            <!-- BEFORE / AFTER Badges -->
+            <span class="absolute top-3 left-3 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-black/75 text-gray-200 border border-white/15 pointer-events-none">
+              Before (Low Res)
+            </span>
+            <span id="afterQualityBadge" class="absolute top-3 right-3 px-2.5 py-1 rounded-md text-[11px] font-bold uppercase tracking-wider bg-ytred text-white shadow pointer-events-none">
+              After • 4K UHD
+            </span>
+
+            <!-- Interactive Split Range Overlay -->
+            <input
+              id="splitSlider"
+              type="range"
+              min="0"
+              max="100"
+              value="50"
+              aria-label="Compare Before and After"
+              class="absolute inset-0 w-full h-full opacity-0 cursor-ew-resize z-20"
+            />
+          </div>
+
+          <!-- Photo Stage Footer Bar -->
+          <div class="px-4 py-2.5 bg-ytelevated/70 border-t border-ytborder flex flex-wrap items-center justify-between gap-2 text-xs">
+            <div class="flex items-center gap-2 text-gray-300">
+              <span class="inline-block w-2 h-2 rounded-full bg-emerald-400"></span>
+              <span>Drag slider left/right to compare Original vs Enhanced</span>
+            </div>
+            <div id="photoDimensionsText" class="font-mono text-gray-400">1280 × 720 → 3840 × 2160 (4K)</div>
+          </div>
+        </div>
+
+        <!-- VIDEO STUDIO PREVIEW STAGE (CapCut Style) -->
+        <div id="videoStageCard" class="hidden bg-ytsurface border border-ytborder rounded-2xl overflow-hidden shadow-xl">
+          <div class="relative w-full aspect-video bg-black overflow-hidden flex items-center justify-center">
+            <!-- HTML5 Video Element (for uploaded files) -->
+            <video id="userVideoEl" playsinline loop class="hidden w-full h-full object-contain transition-all duration-150"></video>
+
+            <!-- Built-in Cinematic Canvas Video Generator (when no video file uploaded yet) -->
+            <canvas id="demoVideoCanvas" class="w-full h-full object-contain transition-all duration-150"></canvas>
+
+            <!-- Vignette Overlay -->
+            <div id="videoVignetteOverlay" class="absolute inset-0 pointer-events-none" style="box-shadow: inset 0 0 70px rgba(0,0,0,0.55);"></div>
+
+            <!-- CapCut Style Text / Caption Overlay -->
+            <div id="videoCaptionOverlay" class="absolute bottom-7 left-1/2 -translate-x-1/2 px-4 py-1.5 rounded-lg bg-black/65 backdrop-blur-sm border border-white/15 text-white font-bold text-sm sm:text-lg tracking-wide text-center max-w-[85%] pointer-events-none shadow-lg">
+              CINEMATIC 4K • STUDIO PRO
+            </div>
+
+            <!-- Top Video Status Pill -->
+            <div class="absolute top-3 left-3 flex items-center gap-2 pointer-events-none">
+              <span id="videoPresetBadge" class="px-2.5 py-1 rounded-md text-[11px] font-bold uppercase bg-capcut text-black">
+                Teal & Orange
+              </span>
+              <span id="videoSpeedBadge" class="px-2.5 py-1 rounded-md text-[11px] font-bold bg-black/75 text-white border border-white/15">
+                1.0x
+              </span>
+            </div>
+
+            <!-- Big Center Play/Pause Button when paused -->
+            <button id="centerPlayBtn" type="button" class="w-14 h-14 rounded-full bg-ytred/90 hover:bg-ytred text-white flex items-center justify-center shadow-2xl transition transform hover:scale-105 cursor-pointer">
+              <svg id="centerPlayIcon" class="w-7 h-7 ml-0.5 hidden" viewBox="0 0 24 24" fill="currentColor">
+                <polygon points="5 3 19 12 5 21 5 3" />
+              </svg>
+              <svg id="centerPauseIcon" class="w-7 h-7" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="6" y="4" width="4" height="16" />
+                <rect x="14" y="4" width="4" height="16" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- CapCut Timeline Scrubber & Multi-Track Bar -->
+          <div class="p-3.5 bg-ytelevated/80 border-t border-ytborder space-y-3">
+            <div class="flex items-center justify-between gap-2">
+              <button id="timelinePlayToggle" type="button" class="px-3 py-1.5 rounded-xl bg-white text-black hover:bg-gray-200 text-xs font-bold flex items-center gap-1.5 transition cursor-pointer">
+                <svg id="timelinePlaySvg" class="w-3.5 h-3.5 hidden" viewBox="0 0 24 24" fill="currentColor">
+                  <polygon points="5 3 19 12 5 21 5 3" />
+                </svg>
+                <svg id="timelinePauseSvg" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                  <rect x="6" y="4" width="4" height="16" />
+                  <rect x="14" y="4" width="4" height="16" />
+                </svg>
+                <span id="timelinePlayLabel">Pause</span>
+              </button>
+
+              <div class="flex items-center gap-1">
+                <button data-speed="0.5" class="speed-btn px-2 py-1 rounded-lg text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder cursor-pointer">0.5x</button>
+                <button data-speed="1" class="speed-btn active px-2 py-1 rounded-lg text-xs font-bold bg-capcut text-black cursor-pointer">1x</button>
+                <button data-speed="1.5" class="speed-btn px-2 py-1 rounded-lg text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder cursor-pointer">1.5x</button>
+                <button data-speed="2" class="speed-btn px-2 py-1 rounded-lg text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder cursor-pointer">2x</button>
+              </div>
+
+              <span id="videoTimeDisplay" class="text-xs font-mono text-gray-300">00:04 / 00:15</span>
+            </div>
+
+            <!-- Interactive Timeline Scrubber -->
+            <div>
+              <input id="videoScrubber" type="range" min="0" max="100" value="25" class="w-full studio-slider" />
+              <!-- Visual CapCut Tracks -->
+              <div class="mt-2 space-y-1.5">
+                <div class="h-7 rounded-lg bg-gradient-to-r from-cyan-900/70 via-blue-900/70 to-amber-900/70 border border-cyan-500/40 px-2.5 flex items-center justify-between text-[11px] font-medium text-cyan-200">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <rect x="2" y="4" width="20" height="16" rx="2" />
+                    </svg>
+                    Main Video Track • 4K Color Graded
+                  </span>
+                  <span class="text-[10px] opacity-80">Trim In / Out</span>
+                </div>
+                <div class="h-6 rounded-lg bg-purple-950/60 border border-purple-500/30 px-2.5 flex items-center justify-between text-[11px] text-purple-200">
+                  <span class="flex items-center gap-1.5">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                      <path d="M4 7V4h16v3" />
+                      <path d="M9 20h6" />
+                      <path d="M12 4v16" />
+                    </svg>
+                    Text / Title Overlay Layer
+                  </span>
+                  <span class="text-[10px] text-purple-300">Synced</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick AI Tool Cards Grid (Filtered by Category Chips) -->
+        <div class="bg-ytsurface border border-ytborder rounded-2xl p-4">
+          <div class="flex items-center justify-between mb-3">
+            <h3 class="text-sm sm:text-base font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-ytred" viewBox="0 0 24 24" fill="currentColor">
+                <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+              </svg>
+              <span>One-Tap AI Presets & Studio Tools</span>
+            </h3>
+            <span id="toolCountLabel" class="text-xs text-gray-400">6 Tools</span>
+          </div>
+
+          <div id="aiToolsGrid" class="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
+            <!-- Tool Card 1: Remini Magic 4K -->
+            <button data-cat="remini" data-preset="remini4k" class="ai-preset-card text-left p-3 rounded-xl bg-ytelevated hover:bg-ythover border border-ytborder hover:border-ytred/60 transition group cursor-pointer">
+              <div class="w-8 h-8 rounded-lg bg-red-500/15 text-ytred flex items-center justify-center mb-2 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z" />
+                </svg>
+              </div>
+              <div class="text-xs sm:text-sm font-bold text-white">Remini 4K Restore</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">Deblur, sharpen & 4K detail</div>
+            </button>
+
+            <!-- Tool Card 2: AI Portrait Glow -->
+            <button data-cat="ai" data-preset="portraitGlow" class="ai-preset-card text-left p-3 rounded-xl bg-ytelevated hover:bg-ythover border border-ytborder hover:border-accent/60 transition group cursor-pointer">
+              <div class="w-8 h-8 rounded-lg bg-accent/15 text-accent flex items-center justify-center mb-2 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="8" r="4" />
+                  <path d="M20 21a8 8 0 1 0-16 0" />
+                </svg>
+              </div>
+              <div class="text-xs sm:text-sm font-bold text-white">AI Face & Skin Glow</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">Smooth grain + natural clarity</div>
+            </button>
+
+            <!-- Tool Card 3: Low-Light Night Boost -->
+            <button data-cat="ai" data-preset="nightBoost" class="ai-preset-card text-left p-3 rounded-xl bg-ytelevated hover:bg-ythover border border-ytborder hover:border-amber-400/60 transition group cursor-pointer">
+              <div class="w-8 h-8 rounded-lg bg-amber-500/15 text-amber-400 flex items-center justify-center mb-2 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+                </svg>
+              </div>
+              <div class="text-xs sm:text-sm font-bold text-white">Night Shadow Lift</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">Brighten dark phone shots</div>
+            </button>
+
+            <!-- Tool Card 4: CapCut Teal & Orange -->
+            <button data-cat="capcut" data-preset="tealOrange" class="ai-preset-card text-left p-3 rounded-xl bg-ytelevated hover:bg-ythover border border-ytborder hover:border-capcut/60 transition group cursor-pointer">
+              <div class="w-8 h-8 rounded-lg bg-capcut/15 text-capcut flex items-center justify-center mb-2 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <polygon points="23 7 16 12 23 17 23 7" />
+                  <rect x="1" y="5" width="15" height="14" rx="2" />
+                </svg>
+              </div>
+              <div class="text-xs sm:text-sm font-bold text-white">CapCut Teal & Orange</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">Blockbuster reel color grade</div>
+            </button>
+
+            <!-- Tool Card 5: Cinematic Noir -->
+            <button data-cat="color" data-preset="cinemaNoir" class="ai-preset-card text-left p-3 rounded-xl bg-ytelevated hover:bg-ythover border border-ytborder hover:border-purple-400/60 transition group cursor-pointer">
+              <div class="w-8 h-8 rounded-lg bg-purple-500/15 text-purple-400 flex items-center justify-center mb-2 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="10" />
+                  <path d="M12 2a10 10 0 0 1 0 20z" fill="currentColor" />
+                </svg>
+              </div>
+              <div class="text-xs sm:text-sm font-bold text-white">Cinematic Contrast</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">Dramatic shadows & punch</div>
+            </button>
+
+            <!-- Tool Card 6: Golden Hour Vibrant -->
+            <button data-cat="color" data-preset="goldenHour" class="ai-preset-card text-left p-3 rounded-xl bg-ytelevated hover:bg-ythover border border-ytborder hover:border-orange-400/60 transition group cursor-pointer">
+              <div class="w-8 h-8 rounded-lg bg-orange-500/15 text-orange-400 flex items-center justify-center mb-2 group-hover:scale-105 transition">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                  <circle cx="12" cy="12" r="5" />
+                  <line x1="12" y1="1" x2="12" y2="3" />
+                  <line x1="12" y1="21" x2="12" y2="23" />
+                  <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                  <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                  <line x1="1" y1="12" x2="3" y2="12" />
+                  <line x1="21" y1="12" x2="23" y2="12" />
+                </svg>
+              </div>
+              <div class="text-xs sm:text-sm font-bold text-white">Golden Hour HD</div>
+              <div class="text-[11px] text-gray-400 mt-0.5">Warm sunlight & rich vibrance</div>
+            </button>
+          </div>
+        </div>
+      </section>
+
+      <!-- RIGHT INSPECTOR & CONTROLS PANEL (5 cols on lg) -->
+      <aside class="lg:col-span-5 flex flex-col gap-4">
+
+        <!-- PHOTO 4K ENHANCER CONTROLS CARD -->
+        <div id="photoControlsPanel" class="bg-ytsurface border border-ytborder rounded-2xl p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-ytborder pb-3">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-white">4K Remini Enhancer Controls</h3>
+              <p class="text-xs text-gray-400">Real-time pixel sharpening, clarity & upscaling</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-ytred/15 text-ytred border border-ytred/30">
+              AI Engine
+            </span>
+          </div>
+
+          <!-- Output Resolution Selector -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-2">Export / Upscale Target Resolution</label>
+            <div class="grid grid-cols-3 gap-2">
+              <button data-res="1080" class="res-btn py-2 px-2.5 rounded-xl text-xs font-bold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer">
+                HD 1080p
+              </button>
+              <button data-res="1440" class="res-btn py-2 px-2.5 rounded-xl text-xs font-bold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer">
+                2K QHD
+              </button>
+              <button data-res="2160" class="res-btn active py-2 px-2.5 rounded-xl text-xs font-bold bg-ytred text-white border border-ytred transition cursor-pointer">
+                4K UHD
+              </button>
+            </div>
+          </div>
+
+          <!-- Sliders -->
+          <div class="space-y-3.5">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">AI Sharpness & Detail Boost</span>
+                <span id="valSharpness" class="font-mono text-ytred font-semibold">65%</span>
+              </div>
+              <input id="sliderSharpness" type="range" min="0" max="100" value="65" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Micro-Clarity & Texture</span>
+                <span id="valClarity" class="font-mono text-accent font-semibold">45%</span>
+              </div>
+              <input id="sliderClarity" type="range" min="0" max="100" value="45" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Denoise / Smooth Grain</span>
+                <span id="valDenoise" class="font-mono text-emerald-400 font-semibold">35%</span>
+              </div>
+              <input id="sliderDenoise" type="range" min="0" max="100" value="35" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Brightness / Exposure</span>
+                <span id="valBrightness" class="font-mono text-gray-200 font-semibold">106%</span>
+              </div>
+              <input id="sliderBrightness" type="range" min="50" max="150" value="106" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Contrast Punch</span>
+                <span id="valContrast" class="font-mono text-gray-200 font-semibold">112%</span>
+              </div>
+              <input id="sliderContrast" type="range" min="50" max="160" value="112" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Color Vibrance / Saturation</span>
+                <span id="valSaturation" class="font-mono text-gray-200 font-semibold">118%</span>
+              </div>
+              <input id="sliderSaturation" type="range" min="0" max="200" value="118" class="w-full studio-slider" />
+            </div>
+          </div>
+
+          <!-- Download Enhanced 4K Photo CTA -->
+          <div class="pt-2 flex flex-col sm:flex-row gap-2">
+            <button id="downloadPhotoBtn" type="button" class="flex-1 py-3 px-4 rounded-xl bg-gradient-to-r from-ytred to-[#ff3b5c] hover:opacity-95 text-white font-bold text-sm shadow-lg shadow-red-950/50 flex items-center justify-center gap-2 transition cursor-pointer">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              <span id="downloadBtnText">Save 4K Enhanced Photo</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- CAPCUT VIDEO STUDIO CONTROLS CARD -->
+        <div id="videoControlsPanel" class="hidden bg-ytsurface border border-ytborder rounded-2xl p-4 space-y-4">
+          <div class="flex items-center justify-between border-b border-ytborder pb-3">
+            <div>
+              <h3 class="text-sm sm:text-base font-bold text-white">CapCut Cinematic Video Editor</h3>
+              <p class="text-xs text-gray-400">Color LUT presets, vignette, speed & text titles</p>
+            </div>
+            <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-capcut/15 text-capcut border border-capcut/30">
+              CapCut Mode
+            </span>
+          </div>
+
+          <!-- Cinematic Color Presets -->
+          <div>
+            <label class="block text-xs font-semibold text-gray-300 mb-2">Cinematic Color Grade</label>
+            <div class="grid grid-cols-2 gap-2">
+              <button data-vpreset="tealOrange" class="vpreset-btn active py-2 px-3 rounded-xl text-xs font-bold bg-capcut text-black transition cursor-pointer">
+                Teal & Orange
+              </button>
+              <button data-vpreset="cinemaNoir" class="vpreset-btn py-2 px-3 rounded-xl text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer">
+                Cinematic Noir
+              </button>
+              <button data-vpreset="goldenHour" class="vpreset-btn py-2 px-3 rounded-xl text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer">
+                Golden Hour
+              </button>
+              <button data-vpreset="crisp4k" class="vpreset-btn py-2 px-3 rounded-xl text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer">
+                Crisp 4K Vivid
+              </button>
+            </div>
+          </div>
+
+          <!-- Video Sliders -->
+          <div class="space-y-3">
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Exposure / Brightness</span>
+                <span id="vValBright" class="font-mono text-capcut font-semibold">105%</span>
+              </div>
+              <input id="vSliderBright" type="range" min="60" max="150" value="105" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Cinematic Contrast</span>
+                <span id="vValContrast" class="font-mono text-capcut font-semibold">118%</span>
+              </div>
+              <input id="vSliderContrast" type="range" min="60" max="165" value="118" class="w-full studio-slider" />
+            </div>
+
+            <div>
+              <div class="flex justify-between text-xs mb-1">
+                <span class="font-medium text-gray-200">Vignette Edge Shadow</span>
+                <span id="vValVignette" class="font-mono text-capcut font-semibold">55%</span>
+              </div>
+              <input id="vSliderVignette" type="range" min="0" max="100" value="55" class="w-full studio-slider" />
+            </div>
+          </div>
+
+          <!-- Caption Overlay Input -->
+          <div>
+            <label for="videoCaptionInput" class="block text-xs font-semibold text-gray-300 mb-1.5">Video Caption / Title Overlay</label>
+            <input
+              id="videoCaptionInput"
+              type="text"
+              maxlength="48"
+              value="CINEMATIC 4K • STUDIO PRO"
+              placeholder="Enter reel title or caption..."
+              class="w-full px-3 py-2 rounded-xl bg-ytbg border border-ytborder text-sm text-white placeholder-gray-500 focus:outline-none focus:border-capcut"
+            />
+          </div>
+
+          <!-- Capture 4K Frame Snapshot -->
+          <button id="captureVideoFrameBtn" type="button" class="w-full py-3 px-4 rounded-xl bg-capcut hover:bg-[#00b8b9] text-black font-bold text-sm flex items-center justify-center gap-2 transition cursor-pointer">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z" />
+              <circle cx="12" cy="13" r="4" />
+            </svg>
+            <span>Capture 4K Frame Snapshot (PNG)</span>
+          </button>
+        </div>
+
+        <!-- GitHub Pages & Android APK Quick Card -->
+        <div class="bg-ytsurface border border-ytborder rounded-2xl p-4 space-y-2.5">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <svg class="w-4 h-4 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="16 18 22 12 16 6" />
+                <polyline points="8 6 2 12 8 18" />
+              </svg>
+              <span>GitHub & Android APK Ready</span>
+            </h3>
+            <button id="openGuideBtnInline" type="button" class="text-xs font-semibold text-accent hover:underline cursor-pointer">
+              Setup Guide →
+            </button>
+          </div>
+          <p class="text-xs text-gray-400 leading-relaxed">
+            Save this single file as <code class="px-1.5 py-0.5 rounded bg-ytbg text-gray-200">index.html</code> on GitHub Pages. All icons are inline SVGs so zero broken boxes ever appear in Android WebView.
+          </p>
+        </div>
+      </aside>
+    </div>
+  </main>
+
+  <!-- Fixed Bottom Navigation Bar (Mobile & Tablet Friendly) -->
+  <nav class="fixed bottom-0 inset-x-0 z-40 bg-ytbg/95 backdrop-blur-md border-t border-ytborder px-2 py-1.5">
+    <div class="max-w-xl mx-auto grid grid-cols-4 gap-1">
+      <button data-nav="home" class="bottom-nav-btn active flex flex-col items-center justify-center py-1.5 rounded-xl text-white transition cursor-pointer">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z" />
+        </svg>
+        <span class="text-[11px] font-semibold mt-0.5">AI Hub</span>
+      </button>
+
+      <button data-nav="enhance" class="bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400 hover:text-white transition cursor-pointer">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M12 3l1.9 4.6L18.5 9.5l-4.6 1.9L12 16l-1.9-4.6L5.5 9.5l4.6-1.9L12 3z" />
+        </svg>
+        <span class="text-[11px] font-medium mt-0.5">4K Enhance</span>
+      </button>
+
+      <button data-nav="video" class="bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400 hover:text-white transition cursor-pointer">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <rect x="2" y="4" width="20" height="16" rx="2" />
+          <polygon points="10 8 16 12 10 16 10 8" />
+        </svg>
+        <span class="text-[11px] font-medium mt-0.5">Video Edit</span>
+      </button>
+
+      <button data-nav="export" class="bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400 hover:text-white transition cursor-pointer">
+        <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+          <polyline points="7 10 12 15 17 10" />
+          <line x1="12" y1="15" x2="12" y2="3" />
+        </svg>
+        <span class="text-[11px] font-medium mt-0.5">Export</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- GitHub Pages & Android APK Wrapper Modal -->
+  <div id="guideModal" class="hidden fixed inset-0 z-50 bg-black/80 backdrop-blur-sm p-4 flex items-center justify-center overflow-y-auto">
+    <div class="bg-ytsurface border border-ytborder rounded-2xl max-w-xl w-full p-5 space-y-4 shadow-2xl my-auto">
+      <div class="flex items-center justify-between border-b border-ytborder pb-3">
+        <h3 class="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+          <svg class="w-5 h-5 text-emerald-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+            <polyline points="16 18 22 12 16 6" />
+            <polyline points="8 6 2 12 8 18" />
+          </svg>
+          <span>GitHub Pages & Android APK Guide</span>
+        </h3>
+        <button id="closeGuideBtn" type="button" class="p-1.5 rounded-lg bg-ytelevated hover:bg-ythover text-gray-300 cursor-pointer">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm text-gray-300 leading-relaxed">
+        <div class="p-3 rounded-xl bg-ytelevated border border-ytborder">
+          <div class="font-bold text-white mb-1">1. Host on GitHub Pages</div>
+          <p class="text-gray-400">Create a repository on GitHub, upload this file as <code class="text-accent">index.html</code>, go to <strong>Settings → Pages</strong>, select <strong>Deploy from a branch (main)</strong>, and your live link is ready.</p>
+        </div>
+
+        <div class="p-3 rounded-xl bg-ytelevated border border-ytborder">
+          <div class="font-bold text-white mb-1">2. Wrap as Android App (WebView / Capacitor / PWA)</div>
+          <p class="text-gray-400">Load your GitHub Pages URL inside your Android WebView (or package locally). In <code class="text-accent">AndroidManifest.xml</code>, include media permissions so gallery file selection works smoothly:</p>
+          <pre class="mt-2 p-2.5 rounded-lg bg-ytbg text-[11px] font-mono text-emerald-300 overflow-x-auto">&lt;uses-permission android:name="android.permission.INTERNET" /&gt;
+&lt;uses-permission android:name="android.permission.READ_MEDIA_IMAGES" /&gt;
+&lt;uses-permission android:name="android.permission.READ_MEDIA_VIDEO" /&gt;
+&lt;uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" /&gt;</pre>
+        </div>
+
+        <div class="p-3 rounded-xl bg-ytelevated border border-ytborder">
+          <div class="font-bold text-white mb-1">3. Why Icons Never Break</div>
+          <p class="text-gray-400">Every icon uses inline <code class="text-capcut">&lt;svg&gt;</code> paths directly inside the HTML—no external icon font CDN that fails offline or shows square boxes.</p>
+        </div>
+      </div>
+
+      <div class="flex justify-end pt-1">
+        <button id="closeGuideBtnFooter" type="button" class="px-4 py-2 rounded-xl bg-white text-black font-bold text-xs sm:text-sm hover:bg-gray-200 transition cursor-pointer">
+          Got It
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      // ==========================================
+      // 1. STATE & DOM REFERENCES
+      // ==========================================
+      const state = {
+        mode: "photo", // "photo" | "video"
+        category: "all",
+        zoom: 1,
+        targetHeight: 2160, // 1080 | 1440 | 2160
+        mediaName: "Sample Portrait",
+        galleryReady: false,
+        // Photo enhancer parameters
+        sharpness: 65,
+        clarity: 45,
+        denoise: 35,
+        brightness: 106,
+        contrast: 112,
+        saturation: 118,
+        // Video studio parameters
+        videoPreset: "tealOrange",
+        vBrightness: 105,
+        vContrast: 118,
+        vVignette: 55,
+        videoSpeed: 1,
+        videoPlaying: true,
+        videoProgress: 25, // 0..100
+        videoCaption: "CINEMATIC 4K • STUDIO PRO",
+        hasUploadedVideo: false,
+      };
+
+      // Check session/localStorage for one-time gallery acknowledgment
+      try {
+        if (localStorage.getItem("studio4k_gallery_ready") === "1") {
+          state.galleryReady = true;
+        }
+      } catch (_) {}
+
+      const els = {
+        toastContainer: document.getElementById("toastContainer"),
+        photoFileInput: document.getElementById("photoFileInput"),
+        videoFileInput: document.getElementById("videoFileInput"),
+        permissionBadgeBtn: document.getElementById("permissionBadgeBtn"),
+        permissionDot: document.getElementById("permissionDot"),
+        permissionLabel: document.getElementById("permissionLabel"),
+        permStatusPill: document.getElementById("permStatusPill"),
+        enableGalleryBtn: document.getElementById("enableGalleryBtn"),
+        pickPhotoBtn: document.getElementById("pickPhotoBtn"),
+        pickVideoBtn: document.getElementById("pickVideoBtn"),
+        quickUploadBtn: document.getElementById("quickUploadBtn"),
+        loadDemoSampleBtn: document.getElementById("loadDemoSampleBtn"),
+        modePhotoBtn: document.getElementById("modePhotoBtn"),
+        modeVideoBtn: document.getElementById("modeVideoBtn"),
+        activeMediaBadge: document.getElementById("activeMediaBadge"),
+        zoomOutBtn: document.getElementById("zoomOutBtn"),
+        zoomInBtn: document.getElementById("zoomInBtn"),
+        zoomReadout: document.getElementById("zoomReadout"),
+        resetAllBtn: document.getElementById("resetAllBtn"),
+        photoStageCard: document.getElementById("photoStageCard"),
+        videoStageCard: document.getElementById("videoStageCard"),
+        photoControlsPanel: document.getElementById("photoControlsPanel"),
+        videoControlsPanel: document.getElementById("videoControlsPanel"),
+        enhancedCanvas: document.getElementById("enhancedCanvas"),
+        originalCanvas: document.getElementById("originalCanvas"),
+        beforeOverlay: document.getElementById("beforeOverlay"),
+        splitDivider: document.getElementById("splitDivider"),
+        splitSlider: document.getElementById("splitSlider"),
+        photoDimensionsText: document.getElementById("photoDimensionsText"),
+        afterQualityBadge: document.getElementById("afterQualityBadge"),
+        downloadBtnText: document.getElementById("downloadBtnText"),
+        downloadPhotoBtn: document.getElementById("downloadPhotoBtn"),
+        // Sliders & readouts
+        sliderSharpness: document.getElementById("sliderSharpness"),
+        sliderClarity: document.getElementById("sliderClarity"),
+        sliderDenoise: document.getElementById("sliderDenoise"),
+        sliderBrightness: document.getElementById("sliderBrightness"),
+        sliderContrast: document.getElementById("sliderContrast"),
+        sliderSaturation: document.getElementById("sliderSaturation"),
+        valSharpness: document.getElementById("valSharpness"),
+        valClarity: document.getElementById("valClarity"),
+        valDenoise: document.getElementById("valDenoise"),
+        valBrightness: document.getElementById("valBrightness"),
+        valContrast: document.getElementById("valContrast"),
+        valSaturation: document.getElementById("valSaturation"),
+        // Video elements
+        userVideoEl: document.getElementById("userVideoEl"),
+        demoVideoCanvas: document.getElementById("demoVideoCanvas"),
+        videoVignetteOverlay: document.getElementById("videoVignetteOverlay"),
+        videoCaptionOverlay: document.getElementById("videoCaptionOverlay"),
+        videoCaptionInput: document.getElementById("videoCaptionInput"),
+        videoPresetBadge: document.getElementById("videoPresetBadge"),
+        videoSpeedBadge: document.getElementById("videoSpeedBadge"),
+        centerPlayBtn: document.getElementById("centerPlayBtn"),
+        centerPlayIcon: document.getElementById("centerPlayIcon"),
+        centerPauseIcon: document.getElementById("centerPauseIcon"),
+        timelinePlayToggle: document.getElementById("timelinePlayToggle"),
+        timelinePlaySvg: document.getElementById("timelinePlaySvg"),
+        timelinePauseSvg: document.getElementById("timelinePauseSvg"),
+        timelinePlayLabel: document.getElementById("timelinePlayLabel"),
+        videoScrubber: document.getElementById("videoScrubber"),
+        videoTimeDisplay: document.getElementById("videoTimeDisplay"),
+        vSliderBright: document.getElementById("vSliderBright"),
+        vSliderContrast: document.getElementById("vSliderContrast"),
+        vSliderVignette: document.getElementById("vSliderVignette"),
+        vValBright: document.getElementById("vValBright"),
+        vValContrast: document.getElementById("vValContrast"),
+        vValVignette: document.getElementById("vValVignette"),
+        captureVideoFrameBtn: document.getElementById("captureVideoFrameBtn"),
+        // Guide modal
+        guideModal: document.getElementById("guideModal"),
+        openGuideBtn: document.getElementById("openGuideBtn"),
+        openGuideBtnInline: document.getElementById("openGuideBtnInline"),
+        closeGuideBtn: document.getElementById("closeGuideBtn"),
+        closeGuideBtnFooter: document.getElementById("closeGuideBtnFooter"),
+      };
+
+      // Source image holder (starts with generated sample low-res photo)
+      let sourceImage = new Image();
+      let sourceWidth = 960;
+      let sourceHeight = 640;
+
+      // ==========================================
+      // 2. TOAST & PERMISSION STATUS HELPERS
+      // ==========================================
+      function showToast(message, type = "info") {
+        const toast = document.createElement("div");
+        const colorMap = {
+          info: "bg-ytelevated border-accent/60 text-white",
+          success: "bg-emerald-950/95 border-emerald-500/60 text-emerald-100",
+          warn: "bg-amber-950/95 border-amber-500/60 text-amber-100",
+        };
+        toast.className = `px-4 py-2.5 rounded-xl border text-xs sm:text-sm font-semibold shadow-2xl backdrop-blur-md transition-all duration-200 ${colorMap[type] || colorMap.info}`;
+        toast.textContent = message;
+        els.toastContainer.appendChild(toast);
+
+        setTimeout(() => {
+          toast.classList.add("opacity-0", "-translate-y-2");
+          setTimeout(() => toast.remove(), 220);
+        }, 2600);
+      }
+
+      function markGalleryReady(silent = false) {
+        state.galleryReady = true;
+        try {
+          localStorage.setItem("studio4k_gallery_ready", "1");
+        } catch (_) {}
+        els.permissionDot.className = "w-2 h-2 rounded-full bg-emerald-400";
+        els.permissionLabel.textContent = "Gallery Ready";
+        els.permStatusPill.className = "px-2 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30";
+        els.permStatusPill.textContent = "Gallery Access Ready (1-Time Enabled)";
+        if (!silent) {
+          showToast("Gallery & file access enabled for this session!", "success");
+        }
+      }
+
+      function syncPermissionUI() {
+        if (state.galleryReady) {
+          markGalleryReady(true);
+        }
+      }
+
+      // ==========================================
+      // 3. SAMPLE PHOTO & VIDEO GENERATOR
+      // ==========================================
+      function createSampleLowResPhoto() {
+        const c = document.createElement("canvas");
+        c.width = 720;
+        c.height = 480;
+        const ctx = c.getContext("2d");
+
+        // Sky / Sunset gradient
+        const sky = ctx.createLinearGradient(0, 0, 0, c.height * 0.72);
+        sky.addColorStop(0, "#1d3557");
+        sky.addColorStop(0.55, "#457b9d");
+        sky.addColorStop(1, "#f4a261");
+        ctx.fillStyle = sky;
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        // Sun glow
+        const sunGrad = ctx.createRadialGradient(520, 175, 10, 520, 175, 130);
+        sunGrad.addColorStop(0, "rgba(255, 243, 176, 0.95)");
+        sunGrad.addColorStop(0.4, "rgba(255, 183, 77, 0.45)");
+        sunGrad.addColorStop(1, "rgba(255, 183, 77, 0)");
+        ctx.fillStyle = sunGrad;
+        ctx.fillRect(0, 0, c.width, c.height);
+
+        // Distant mountains
+        ctx.fillStyle = "#264653";
+        ctx.beginPath();
+        ctx.moveTo(0, 320);
+        ctx.lineTo(190, 190);
+        ctx.lineTo(380, 315);
+        ctx.lineTo(570, 210);
+        ctx.lineTo(720, 305);
+        ctx.lineTo(720, 480);
+        ctx.lineTo(0, 480);
+        ctx.closePath();
+        ctx.fill();
+
+        // Foreground valley & water reflection
+        const ground = ctx.createLinearGradient(0, 300, 0, 480);
+        ground.addColorStop(0, "#2a9d8f");
+        ground.addColorStop(1, "#142129");
+        ctx.fillStyle = ground;
+        ctx.fillRect(0, 300, c.width, 180);
+
+        // Stylized portrait / silhouette subject in foreground
+        ctx.fillStyle = "#111827";
+        ctx.beginPath();
+        ctx.arc(250, 285, 34, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.roundRect(212, 322, 76, 110, 24);
+        ctx.fill();
+
+        // Add subtle simulated phone noise/softness so Remini enhancement pops
+        for (let i = 0; i < 2400; i++) {
+          const x = Math.random() * c.width;
+          const y = Math.random() * c.height;
+          ctx.fillStyle = i % 2 === 0 ? "rgba(255,255,255,0.06)" : "rgba(0,0,0,0.07)";
+          ctx.fillRect(x, y, 2, 2);
+        }
+
+        const dataUrl = c.toDataURL("image/jpeg", 0.72);
+        const img = new Image();
+        img.onload = () => {
+          sourceImage = img;
+          sourceWidth = img.naturalWidth || 720;
+          sourceHeight = img.naturalHeight || 480;
+          state.mediaName = "Sample Low-Res Photo";
+          els.activeMediaBadge.textContent = state.mediaName;
+          renderEnhancedPhoto();
+        };
+        img.src = dataUrl;
+      }
+
+      // ==========================================
+      // 4. REAL-TIME CANVAS PHOTO 4K RENDERER
+      // ==========================================
+      function renderEnhancedPhoto() {
+        if (!sourceImage.complete || !sourceImage.naturalWidth) return;
+
+        // Display preview resolution capped for smooth mobile rendering
+        const maxPreviewW = 1280;
+        const scale = Math.min(1.5, maxPreviewW / sourceWidth);
+        const prevW = Math.max(320, Math.round(sourceWidth * scale));
+        const prevH = Math.max(200, Math.round(sourceHeight * scale));
+
+        const origCanvas = els.originalCanvas;
+        const enhCanvas = els.enhancedCanvas;
+        origCanvas.width = prevW;
+        origCanvas.height = prevH;
+        enhCanvas.width = prevW;
+        enhCanvas.height = prevH;
+
+        const oCtx = origCanvas.getContext("2d");
+        const eCtx = enhCanvas.getContext("2d");
+
+        // Draw Original (Before)
+        oCtx.clearRect(0, 0, prevW, prevH);
+        oCtx.drawImage(sourceImage, 0, 0, prevW, prevH);
+
+        // Apply CSS/Canvas color & clarity adjustments
+        const blurPx = (state.denoise / 100) * 1.1;
+        const contrastBoost = state.contrast + (state.clarity / 100) * 18;
+        const satBoost = state.saturation + (state.clarity / 100) * 10;
+
+        eCtx.save();
+        eCtx.filter = `brightness(${state.brightness}%) contrast(${contrastBoost}%) saturate(${satBoost}%) blur(${blurPx.toFixed(2)}px)`;
+        eCtx.clearRect(0, 0, prevW, prevH);
+        eCtx.drawImage(sourceImage, 0, 0, prevW, prevH);
+        eCtx.restore();
+
+        // Apply convolution sharpening pass when sharpness > 0
+        if (state.sharpness > 0) {
+          applySharpenPass(eCtx, prevW, prevH, state.sharpness / 100);
+        }
+
+        // Apply zoom transform
+        const transformVal = `scale(${state.zoom.toFixed(2)})`;
+        enhCanvas.style.transform = transformVal;
+        origCanvas.style.transform = transformVal;
+
+        // Update resolution text & badges
+        const aspect = sourceWidth / sourceHeight;
+        const outH = state.targetHeight;
+        const outW = Math.round(outH * aspect);
+        const labelMap = { 1080: "HD 1080p", 1440: "2K QHD", 2160: "4K UHD" };
+        const resLabel = labelMap[outH] || "4K UHD";
+
+        els.afterQualityBadge.textContent = `After • ${resLabel}`;
+        els.downloadBtnText.textContent = `Save ${resLabel} Enhanced Photo`;
+        els.photoDimensionsText.textContent = `${sourceWidth}×${sourceHeight} → ${outW}×${outH} (${resLabel})`;
+      }
+
+      // Fast 3x3 unsharp/edge boost kernel on canvas ImageData
+      function applySharpenPass(ctx, width, height, amount) {
+        try {
+          const imgData = ctx.getImageData(0, 0, width, height);
+          const data = imgData.data;
+          const copy = new Uint8ClampedArray(data);
+          const strength = amount * 0.65;
+
+          // Skip border pixels for speed
+          for (let y = 1; y < height - 1; y++) {
+            const row = y * width * 4;
+            const prevRow = (y - 1) * width * 4;
+            const nextRow = (y + 1) * width * 4;
+
+            for (let x = 1; x < width - 1; x++) {
+              const idx = row + x * 4;
+              for (let c = 0; c < 3; c++) {
+                const center = copy[idx + c];
+                const neighbors =
+                  copy[prevRow + x * 4 + c] +
+                  copy[nextRow + x * 4 + c] +
+                  copy[idx - 4 + c] +
+                  copy[idx + 4 + c];
+                const edge = center * 4 - neighbors;
+                data[idx + c] = Math.min(255, Math.max(0, center + edge * strength));
+              }
+            }
+          }
+          ctx.putImageData(imgData, 0, 0);
+        } catch (_) {
+          // Fallback safely if tainted canvas occurs
+        }
+      }
+
+      function exportHighResPhoto() {
+        if (!sourceImage.complete || !sourceImage.naturalWidth) {
+          showToast("No image loaded to export.", "warn");
+          return;
+        }
+        try {
+          const aspect = sourceWidth / sourceHeight;
+          const outH = state.targetHeight;
+          const outW = Math.round(outH * aspect);
+
+          const exportCanvas = document.createElement("canvas");
+          exportCanvas.width = outW;
+          exportCanvas.height = outH;
+          const exCtx = exportCanvas.getContext("2d");
+          exCtx.imageSmoothingEnabled = true;
+          exCtx.imageSmoothingQuality = "high";
+
+          const blurPx = (state.denoise / 100) * 1.1;
+          const contrastBoost = state.contrast + (state.clarity / 100) * 18;
+          const satBoost = state.saturation + (state.clarity / 100) * 10;
+
+          exCtx.filter = `brightness(${state.brightness}%) contrast(${contrastBoost}%) saturate(${satBoost}%) blur(${blurPx.toFixed(2)}px)`;
+          exCtx.drawImage(sourceImage, 0, 0, outW, outH);
+          exCtx.filter = "none";
+
+          if (state.sharpness > 20 && outW * outH <= 3840 * 2160) {
+            applySharpenPass(exCtx, outW, outH, (state.sharpness / 100) * 0.75);
+          }
+
+          const link = document.createElement("a");
+          link.download = `Studio4K_${outH}p_${Date.now()}.png`;
+          link.href = exportCanvas.toDataURL("image/png");
+          document.body.appendChild(link);
+          link.click();
+          link.remove();
+
+          showToast(`Exported ${outW}×${outH} enhanced photo!`, "success");
+        } catch (err) {
+          showToast("Could not export image in this browser context.", "warn");
+        }
+      }
+
+      // ==========================================
+      // 5. CAPCUT-STYLE VIDEO STUDIO LOOP
+      // ==========================================
+      const presetStyles = {
+        tealOrange: {
+          name: "Teal & Orange",
+          filterBase: "hue-rotate(-8deg) saturate(1.28)",
+          bright: 105,
+          contrast: 118,
+          vignette: 55,
+        },
+        cinemaNoir: {
+          name: "Cinematic Noir",
+          filterBase: "grayscale(0.92)",
+          bright: 98,
+          contrast: 138,
+          vignette: 75,
+        },
+        goldenHour: {
+          name: "Golden Hour",
+          filterBase: "sepia(0.28) saturate(1.35)",
+          bright: 110,
+          contrast: 112,
+          vignette: 45,
+        },
+        crisp4k: {
+          name: "Crisp 4K Vivid",
+          filterBase: "saturate(1.25)",
+          bright: 106,
+          contrast: 122,
+          vignette: 35,
+        },
+      };
+
+      function applyVideoGrading() {
+        const p = presetStyles[state.videoPreset] || presetStyles.tealOrange;
+        const filterStr = `${p.filterBase} brightness(${state.vBrightness}%) contrast(${state.vContrast}%)`;
+        els.userVideoEl.style.filter = filterStr;
+        els.demoVideoCanvas.style.filter = filterStr;
+
+        const vigAlpha = (state.vVignette / 100) * 0.85;
+        els.videoVignetteOverlay.style.boxShadow = `inset 0 0 85px rgba(0, 0, 0, ${vigAlpha.toFixed(2)})`;
+        els.videoPresetBadge.textContent = p.name;
+        els.videoCaptionOverlay.textContent = state.videoCaption.trim() || "CINEMATIC 4K • STUDIO PRO";
+      }
+
+      function setVideoPlaying(playing) {
+        state.videoPlaying = playing;
+        if (playing) {
+          els.centerPlayIcon.classList.add("hidden");
+          els.centerPauseIcon.classList.remove("hidden");
+          els.timelinePlaySvg.classList.add("hidden");
+          els.timelinePauseSvg.classList.remove("hidden");
+          els.timelinePlayLabel.textContent = "Pause";
+          if (state.hasUploadedVideo) {
+            els.userVideoEl.play().catch(() => {});
+          }
+        } else {
+          els.centerPlayIcon.classList.remove("hidden");
+          els.centerPauseIcon.classList.add("hidden");
+          els.timelinePlaySvg.classList.remove("hidden");
+          els.timelinePauseSvg.classList.add("hidden");
+          els.timelinePlayLabel.textContent = "Play";
+          if (state.hasUploadedVideo) {
+            els.userVideoEl.pause();
+          }
+        }
+      }
+
+      function renderDemoVideoFrame(timeSec) {
+        const c = els.demoVideoCanvas;
+        if (!c.width) {
+          c.width = 854;
+          c.height = 480;
+        }
+        const ctx = c.getContext("2d");
+        const w = c.width;
+        const h = c.height;
+
+        // Animated cinematic horizon & light rays
+        const grad = ctx.createLinearGradient(0, 0, w, h);
+        const shift = Math.sin(timeSec * 0.5) * 0.15;
+        grad.addColorStop(0, "#0b192c");
+        grad.addColorStop(Math.max(0.1, Math.min(0.9, 0.5 + shift)), "#1e3a5f");
+        grad.addColorStop(1, "#c85a32");
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        // Moving cinematic light beams
+        ctx.save();
+        for (let i = 0; i < 4; i++) {
+          const xPos = ((timeSec * 55 * state.videoSpeed + i * 230) % (w + 200)) - 100;
+          const beam = ctx.createLinearGradient(xPos, 0, xPos + 140, h);
+          beam.addColorStop(0, "rgba(255, 220, 170, 0)");
+          beam.addColorStop(0.5, "rgba(255, 210, 150, 0.12)");
+          beam.addColorStop(1, "rgba(255, 220, 170, 0)");
+          ctx.fillStyle = beam;
+          ctx.fillRect(xPos, 0, 140, h);
+        }
+        ctx.restore();
+
+        // Cinematic letterbox bars
+        ctx.fillStyle = "#000000";
+        ctx.fillRect(0, 0, w, 34);
+        ctx.fillRect(0, h - 34, w, 34);
+
+        // Center badge inside demo clip
+        ctx.fillStyle = "rgba(255,255,255,0.85)";
+        ctx.font = "700 18px Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("CAPCUT 4K SAMPLE CLIP • UPLOAD YOUR OWN VIDEO ANYTIME", w / 2, h / 2 - 8);
+      }
+
+      function formatSeconds(sec) {
+        const s = Math.max(0, Math.floor(sec));
+        const mins = Math.floor(s / 60);
+        const rem = s % 60;
+        return `${String(mins).padStart(2, "0")}:${String(rem).padStart(2, "0")}`;
+      }
+
+      let lastFrameTime = performance.now();
+      function studioLoop(now) {
+        const dt = (now - lastFrameTime) / 1000;
+        lastFrameTime = now;
+
+        if (state.mode === "video") {
+          if (state.hasUploadedVideo) {
+            const dur = els.userVideoEl.duration || 15;
+            const cur = els.userVideoEl.currentTime || 0;
+            const pct = Math.min(100, Math.max(0, (cur / dur) * 100));
+            state.videoProgress = pct;
+            els.videoScrubber.value = pct;
+            els.videoTimeDisplay.textContent = `${formatSeconds(cur)} / ${formatSeconds(dur)}`;
+          } else {
+            if (state.videoPlaying) {
+              state.videoProgress += dt * state.videoSpeed * 6.5;
+              if (state.videoProgress > 100) state.videoProgress = 0;
+              els.videoScrubber.value = state.videoProgress;
+            }
+            const totalDemoSec = 15;
+            const curSec = (state.videoProgress / 100) * totalDemoSec;
+            renderDemoVideoFrame(curSec);
+            els.videoTimeDisplay.textContent = `${formatSeconds(curSec)} / ${formatSeconds(totalDemoSec)}`;
+          }
+        }
+
+        requestAnimationFrame(studioLoop);
+      }
+
+      // ==========================================
+      // 6. MODE, CATEGORY, SLIDER & FILE HANDLERS
+      // ==========================================
+      function setStudioMode(newMode) {
+        state.mode = newMode;
+        const isPhoto = newMode === "photo";
+
+        els.photoStageCard.classList.toggle("hidden", !isPhoto);
+        els.photoControlsPanel.classList.toggle("hidden", !isPhoto);
+        els.videoStageCard.classList.toggle("hidden", isPhoto);
+        els.videoControlsPanel.classList.toggle("hidden", isPhoto);
+
+        if (isPhoto) {
+          els.modePhotoBtn.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold bg-ytred text-white transition flex items-center gap-1.5 cursor-pointer";
+          els.modeVideoBtn.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-300 hover:text-white hover:bg-ytelevated transition flex items-center gap-1.5 cursor-pointer";
+          renderEnhancedPhoto();
+        } else {
+          els.modeVideoBtn.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-bold bg-capcut text-black transition flex items-center gap-1.5 cursor-pointer";
+          els.modePhotoBtn.className = "px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold text-gray-300 hover:text-white hover:bg-ytelevated transition flex items-center gap-1.5 cursor-pointer";
+          applyVideoGrading();
+        }
+      }
+
+      function applyPreset(presetKey) {
+        markGalleryReady(true);
+        if (presetKey === "remini4k") {
+          setStudioMode("photo");
+          state.sharpness = 85;
+          state.clarity = 65;
+          state.denoise = 45;
+          state.brightness = 108;
+          state.contrast = 118;
+          state.saturation = 122;
+          syncPhotoSliders();
+          renderEnhancedPhoto();
+          showToast("Applied Remini 4K Restore!", "success");
+        } else if (presetKey === "portraitGlow") {
+          setStudioMode("photo");
+          state.sharpness = 45;
+          state.clarity = 35;
+          state.denoise = 75;
+          state.brightness = 112;
+          state.contrast = 106;
+          state.saturation = 115;
+          syncPhotoSliders();
+          renderEnhancedPhoto();
+          showToast("Applied AI Portrait & Skin Glow!", "success");
+        } else if (presetKey === "nightBoost") {
+          setStudioMode("photo");
+          state.sharpness = 60;
+          state.clarity = 55;
+          state.denoise = 65;
+          state.brightness = 132;
+          state.contrast = 120;
+          state.saturation = 120;
+          syncPhotoSliders();
+          renderEnhancedPhoto();
+          showToast("Applied Night Shadow Lift!", "success");
+        } else if (presetKey === "tealOrange") {
+          setStudioMode("video");
+          state.videoPreset = "tealOrange";
+          applyVideoGrading();
+          showToast("Applied CapCut Teal & Orange grade!", "success");
+        } else if (presetKey === "cinemaNoir") {
+          setStudioMode("video");
+          state.videoPreset = "cinemaNoir";
+          applyVideoGrading();
+          showToast("Applied Cinematic Noir grade!", "success");
+        } else if (presetKey === "goldenHour") {
+          setStudioMode("video");
+          state.videoPreset = "goldenHour";
+          applyVideoGrading();
+          showToast("Applied Golden Hour HD grade!", "success");
+        }
+      }
+
+      function syncPhotoSliders() {
+        els.sliderSharpness.value = state.sharpness;
+        els.sliderClarity.value = state.clarity;
+        els.sliderDenoise.value = state.denoise;
+        els.sliderBrightness.value = state.brightness;
+        els.sliderContrast.value = state.contrast;
+        els.sliderSaturation.value = state.saturation;
+
+        els.valSharpness.textContent = `${state.sharpness}%`;
+        els.valClarity.textContent = `${state.clarity}%`;
+        els.valDenoise.textContent = `${state.denoise}%`;
+        els.valBrightness.textContent = `${state.brightness}%`;
+        els.valContrast.textContent = `${state.contrast}%`;
+        els.valSaturation.textContent = `${state.saturation}%`;
+      }
+
+      function bindEvents() {
+        // Gallery / File Permission & Pickers
+        els.enableGalleryBtn.addEventListener("click", () => {
+          markGalleryReady(false);
+        });
+        els.permissionBadgeBtn.addEventListener("click", () => {
+          if (!state.galleryReady) {
+            markGalleryReady(false);
+          } else {
+            showToast("Gallery permission is active for this session.", "info");
+          }
+        });
+        els.pickPhotoBtn.addEventListener("click", () => {
+          markGalleryReady(true);
+          els.photoFileInput.click();
+        });
+        els.pickVideoBtn.addEventListener("click", () => {
+          markGalleryReady(true);
+          els.videoFileInput.click();
+        });
+        els.quickUploadBtn.addEventListener("click", () => {
+          markGalleryReady(true);
+          if (state.mode === "video") {
+            els.videoFileInput.click();
+          } else {
+            els.photoFileInput.click();
+          }
+        });
+        els.loadDemoSampleBtn.addEventListener("click", () => {
+          markGalleryReady(true);
+          createSampleLowResPhoto();
+          state.hasUploadedVideo = false;
+          els.userVideoEl.classList.add("hidden");
+          els.demoVideoCanvas.classList.remove("hidden");
+          showToast("Loaded sample 4K demo photo & video clip!", "info");
+        });
+
+        // File Input Handlers
+        els.photoFileInput.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          markGalleryReady(true);
+          const reader = new FileReader();
+          reader.onload = (ev) => {
+            const img = new Image();
+            img.onload = () => {
+              sourceImage = img;
+              sourceWidth = img.naturalWidth || 1080;
+              sourceHeight = img.naturalHeight || 720;
+              state.mediaName = file.name;
+              els.activeMediaBadge.textContent = file.name;
+              setStudioMode("photo");
+              renderEnhancedPhoto();
+              showToast(`Loaded "${file.name}" for 4K enhancement!`, "success");
+            };
+            img.src = ev.target.result;
+          };
+          reader.readAsDataURL(file);
+          e.target.value = "";
+        });
+
+        els.videoFileInput.addEventListener("change", (e) => {
+          const file = e.target.files && e.target.files[0];
+          if (!file) return;
+          markGalleryReady(true);
+          const url = URL.createObjectURL(file);
+          state.hasUploadedVideo = true;
+          state.mediaName = file.name;
+          els.activeMediaBadge.textContent = file.name;
+          els.demoVideoCanvas.classList.add("hidden");
+          els.userVideoEl.classList.remove("hidden");
+          els.userVideoEl.src = url;
+          els.userVideoEl.playbackRate = state.videoSpeed;
+          setStudioMode("video");
+          setVideoPlaying(true);
+          showToast(`Loaded "${file.name}" into CapCut Video Studio!`, "success");
+          e.target.value = "";
+        });
+
+        // Mode & Zoom & Reset
+        els.modePhotoBtn.addEventListener("click", () => setStudioMode("photo"));
+        els.modeVideoBtn.addEventListener("click", () => setStudioMode("video"));
+
+        els.zoomInBtn.addEventListener("click", () => {
+          state.zoom = Math.min(2.5, +(state.zoom + 0.25).toFixed(2));
+          els.zoomReadout.textContent = `${Math.round(state.zoom * 100)}%`;
+          renderEnhancedPhoto();
+        });
+        els.zoomOutBtn.addEventListener("click", () => {
+          state.zoom = Math.max(0.75, +(state.zoom - 0.25).toFixed(2));
+          els.zoomReadout.textContent = `${Math.round(state.zoom * 100)}%`;
+          renderEnhancedPhoto();
+        });
+        els.resetAllBtn.addEventListener("click", () => {
+          state.zoom = 1;
+          els.zoomReadout.textContent = "100%";
+          state.sharpness = 65;
+          state.clarity = 45;
+          state.denoise = 35;
+          state.brightness = 106;
+          state.contrast = 112;
+          state.saturation = 118;
+          syncPhotoSliders();
+          renderEnhancedPhoto();
+          showToast("Reset all adjustments to default.", "info");
+        });
+
+        // Before/After Comparison Split Slider
+        els.splitSlider.addEventListener("input", (e) => {
+          const pct = Number(e.target.value);
+          els.beforeOverlay.style.clipPath = `inset(0 ${100 - pct}% 0 0)`;
+          els.splitDivider.style.left = `${pct}%`;
+        });
+
+        // Resolution Buttons
+        document.querySelectorAll(".res-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll(".res-btn").forEach((b) => {
+              b.className = "res-btn py-2 px-2.5 rounded-xl text-xs font-bold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer";
+            });
+            btn.className = "res-btn active py-2 px-2.5 rounded-xl text-xs font-bold bg-ytred text-white border border-ytred transition cursor-pointer";
+            state.targetHeight = Number(btn.dataset.res) || 2160;
+            renderEnhancedPhoto();
+            showToast(`Target output set to ${btn.textContent.trim()}`, "info");
+          });
+        });
+
+        // Photo Sliders
+        const sliderBindings = [
+          [els.sliderSharpness, els.valSharpness, "sharpness", "%"],
+          [els.sliderClarity, els.valClarity, "clarity", "%"],
+          [els.sliderDenoise, els.valDenoise, "denoise", "%"],
+          [els.sliderBrightness, els.valBrightness, "brightness", "%"],
+          [els.sliderContrast, els.valContrast, "contrast", "%"],
+          [els.sliderSaturation, els.valSaturation, "saturation", "%"],
+        ];
+        sliderBindings.forEach(([inputEl, labelEl, key, suffix]) => {
+          inputEl.addEventListener("input", () => {
+            state[key] = Number(inputEl.value);
+            labelEl.textContent = `${state[key]}${suffix}`;
+            renderEnhancedPhoto();
+          });
+        });
+
+        els.downloadPhotoBtn.addEventListener("click", exportHighResPhoto);
+
+        // Category Filter Chips
+        document.querySelectorAll(".cat-chip").forEach((chip) => {
+          chip.addEventListener("click", () => {
+            document.querySelectorAll(".cat-chip").forEach((c) => {
+              c.className = "cat-chip px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium whitespace-nowrap bg-ytelevated hover:bg-ythover text-gray-200 border border-ytborder transition cursor-pointer";
+            });
+            chip.className = "cat-chip active px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-semibold whitespace-nowrap bg-white text-black transition cursor-pointer";
+            const cat = chip.dataset.category;
+            state.category = cat;
+
+            let visibleCount = 0;
+            document.querySelectorAll(".ai-preset-card").forEach((card) => {
+              const show = cat === "all" || card.dataset.cat === cat;
+              card.classList.toggle("hidden", !show);
+              if (show) visibleCount++;
+            });
+            document.getElementById("toolCountLabel").textContent = `${visibleCount} Tools`;
+          });
+        });
+
+        // AI Preset Cards
+        document.querySelectorAll(".ai-preset-card").forEach((card) => {
+          card.addEventListener("click", () => {
+            applyPreset(card.dataset.preset);
+          });
+        });
+
+        // Video Controls
+        els.centerPlayBtn.addEventListener("click", () => setVideoPlaying(!state.videoPlaying));
+        els.timelinePlayToggle.addEventListener("click", () => setVideoPlaying(!state.videoPlaying));
+
+        document.querySelectorAll(".speed-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll(".speed-btn").forEach((b) => {
+              b.className = "speed-btn px-2 py-1 rounded-lg text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder cursor-pointer";
+            });
+            btn.className = "speed-btn active px-2 py-1 rounded-lg text-xs font-bold bg-capcut text-black cursor-pointer";
+            state.videoSpeed = Number(btn.dataset.speed) || 1;
+            els.videoSpeedBadge.textContent = `${state.videoSpeed}x`;
+            if (state.hasUploadedVideo) {
+              els.userVideoEl.playbackRate = state.videoSpeed;
+            }
+            showToast(`Playback speed: ${state.videoSpeed}x`, "info");
+          });
+        });
+
+        els.videoScrubber.addEventListener("input", (e) => {
+          const pct = Number(e.target.value);
+          state.videoProgress = pct;
+          if (state.hasUploadedVideo && els.userVideoEl.duration) {
+            els.userVideoEl.currentTime = (pct / 100) * els.userVideoEl.duration;
+          }
+        });
+
+        document.querySelectorAll(".vpreset-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll(".vpreset-btn").forEach((b) => {
+              b.className = "vpreset-btn py-2 px-3 rounded-xl text-xs font-semibold bg-ytbg text-gray-300 hover:text-white border border-ytborder transition cursor-pointer";
+            });
+            btn.className = "vpreset-btn active py-2 px-3 rounded-xl text-xs font-bold bg-capcut text-black transition cursor-pointer";
+            state.videoPreset = btn.dataset.vpreset;
+            applyVideoGrading();
+          });
+        });
+
+        els.vSliderBright.addEventListener("input", () => {
+          state.vBrightness = Number(els.vSliderBright.value);
+          els.vValBright.textContent = `${state.vBrightness}%`;
+          applyVideoGrading();
+        });
+        els.vSliderContrast.addEventListener("input", () => {
+          state.vContrast = Number(els.vSliderContrast.value);
+          els.vValContrast.textContent = `${state.vContrast}%`;
+          applyVideoGrading();
+        });
+        els.vSliderVignette.addEventListener("input", () => {
+          state.vVignette = Number(els.vSliderVignette.value);
+          els.vValVignette.textContent = `${state.vVignette}%`;
+          applyVideoGrading();
+        });
+
+        els.videoCaptionInput.addEventListener("input", (e) => {
+          state.videoCaption = e.target.value;
+          applyVideoGrading();
+        });
+
+        els.captureVideoFrameBtn.addEventListener("click", () => {
+          try {
+            const snapCanvas = document.createElement("canvas");
+            snapCanvas.width = 1280;
+            snapCanvas.height = 720;
+            const sCtx = snapCanvas.getContext("2d");
+            const p = presetStyles[state.videoPreset] || presetStyles.tealOrange;
+            sCtx.filter = `${p.filterBase} brightness(${state.vBrightness}%) contrast(${state.vContrast}%)`;
+            if (state.hasUploadedVideo) {
+              sCtx.drawImage(els.userVideoEl, 0, 0, snapCanvas.width, snapCanvas.height);
+            } else {
+              sCtx.drawImage(els.demoVideoCanvas, 0, 0, snapCanvas.width, snapCanvas.height);
+            }
+            sCtx.filter = "none";
+            if (state.videoCaption.trim()) {
+              sCtx.font = "bold 28px Inter, sans-serif";
+              sCtx.textAlign = "center";
+              sCtx.fillStyle = "rgba(0,0,0,0.65)";
+              sCtx.fillRect(snapCanvas.width / 2 - 260, snapCanvas.height - 96, 520, 44);
+              sCtx.fillStyle = "#ffffff";
+              sCtx.fillText(state.videoCaption.trim(), snapCanvas.width / 2, snapCanvas.height - 65);
+            }
+            const a = document.createElement("a");
+            a.download = `Studio4K_Frame_${Date.now()}.png`;
+            a.href = snapCanvas.toDataURL("image/png");
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            showToast("Captured 4K video frame snapshot!", "success");
+          } catch (_) {
+            showToast("Frame snapshot captured in preview.", "info");
+          }
+        });
+
+        // Bottom Navigation Tabs
+        document.querySelectorAll(".bottom-nav-btn").forEach((btn) => {
+          btn.addEventListener("click", () => {
+            document.querySelectorAll(".bottom-nav-btn").forEach((b) => {
+              b.className = "bottom-nav-btn flex flex-col items-center justify-center py-1.5 rounded-xl text-gray-400 hover:text-white transition cursor-pointer";
+            });
+            btn.className = "bottom-nav-btn active flex flex-col items-center justify-center py-1.5 rounded-xl text-white transition cursor-pointer";
+
+            const nav = btn.dataset.nav;
+            if (nav === "home") {
+              window.scrollTo({ top: 0, behavior: "smooth" });
+            } else if (nav === "enhance") {
+              setStudioMode("photo");
+              els.photoControlsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            } else if (nav === "video") {
+              setStudioMode("video");
+              els.videoControlsPanel.scrollIntoView({ behavior: "smooth", block: "nearest" });
+            } else if (nav === "export") {
+              if (state.mode === "photo") {
+                exportHighResPhoto();
+              } else {
+                els.captureVideoFrameBtn.click();
+              }
+            }
+          });
+        });
+
+        // GitHub & APK Guide Modal
+        const openModal = () => els.guideModal.classList.remove("hidden");
+        const closeModal = () => els.guideModal.classList.add("hidden");
+        els.openGuideBtn.addEventListener("click", openModal);
+        els.openGuideBtnInline.addEventListener("click", openModal);
+        els.closeGuideBtn.addEventListener("click", closeModal);
+        els.closeGuideBtnFooter.addEventListener("click", closeModal);
+        els.guideModal.addEventListener("click", (e) => {
+          if (e.target === els.guideModal) closeModal();
+        });
+      }
+
+      // ==========================================
+      // 7. INITIALIZATION
+      // ==========================================
+      window.addEventListener("DOMContentLoaded", () => {
+        syncPermissionUI();
+        bindEvents();
+        createSampleLowResPhoto();
+        applyVideoGrading();
+        requestAnimationFrame(studioLoop);
+      });
+    })();
+  </script>
+</body>
+</html>
